@@ -33,6 +33,8 @@ You can use this service from the [git-react-client](https://github.com/Ullink/g
 
 You can run it manually using `npm start`, or use [forever](https://www.npmjs.com/package/forever) to keep it running.
 
+Set the `REPODIR` env variable to the folder containing your bare repositories.
+
 ## Credits
 
 Project was initially forked from [git-rest-api](https://github.com/korya/node-git-rest-api) but has cut most of the ties now.
