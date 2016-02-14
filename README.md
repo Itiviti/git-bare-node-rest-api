@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/Ullink/git-bare-node-rest-api.svg)](https://travis-ci.org/Ullink/git-bare-node-rest-api)
+
 # GIT BARE NODE REST API
 
 The aim of the project is to provide a readonly restful Git API over a set of bare repositories.
