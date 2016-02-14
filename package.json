@@ -9,7 +9,7 @@
   },
   "main": "./rest-api",
   "scripts": {
-    "test": "make test"
+    "test": "npm build"
   },
   "keywords": [
     "git",
