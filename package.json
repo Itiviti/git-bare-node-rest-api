@@ -1,0 +1,43 @@
+{
+  "name": "git-bare-node-rest-api",
+  "description": "A library providing a readonly restful Git API over a set of bare GIT repositories",
+  "version": "0.1.0",
+  "author": "Francois Valdy <francois.valdy@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ullink/node-bare-node-git-rest-api.git"
+  },
+  "main": "./rest-api",
+  "scripts": {
+    "test": "make test"
+  },
+  "keywords": [
+    "git",
+    "bare",
+    "rest",
+    "express"
+  ],
+  "dependencies": {
+    "async": "0.2.9",
+    "cors": "^2.7.1",
+    "dive": "0.3.0",
+    "express": "3.x",
+    "lodash": "^4.0.1",
+    "mkdirp": "0.3.5",
+    "q": "0.9.6",
+    "rimraf": "2.2.5",
+    "rx": "4.0.7",
+    "rx-node": "^1.0.1",
+    "signals": "~1.0.0",
+    "temp": "0.6.0",
+    "winston": "0.7.2"
+  },
+  "devDependencies": {
+    "mocha": "1.15.1",
+    "should": "2.1.1",
+    "supertest": "0.8.2"
+  },
+  "engines": {
+    "node": ">=0.10"
+  }
+}
