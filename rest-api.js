@@ -216,7 +216,7 @@ app.get(config.prefix + '/repo/:repos/grep/:branches',
 {
   var repos = req.git.trees;
   var q    = req.query.q    || '.';
-  var file = req.query.path || '*';
+  var files = req.query.path || '*';
   var ignore_case = req.query.ignore_case ? ['-i'] : [];
   var pattern_type = req.query.pattern_type || 'basic';
   var target_line_no = req.query.target_line_no || 0;
@@ -227,7 +227,7 @@ app.get(config.prefix + '/repo/:repos/grep/:branches',
       var repoDir = path.join(config.repoDir, repo);
       return getBranches(repoDir, req.params.branches)
         .concatMap(function(list) {
-          var greps = rxGit(repoDir, ['-c', 'grep.patternType=' + pattern_type, 'grep', '-In'].concat(ignore_case).concat([q]).concat(list).concat(['--', file]))
+          var greps = rxGit(repoDir, ['-c', 'grep.patternType=' + pattern_type, 'grep', '-In'].concat(ignore_case).concat([q]).concat(list).concat('--').concat(files))
             .map(function(line) {
                 var ret = parseGitGrep(line);
                 ret.repo = repo;
