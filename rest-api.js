@@ -111,8 +111,19 @@ function getRepos(req, res, next) {
         function(repoList) { req.git.trees = repoList.filter(function(dir) { return match.exec(dir); }); next(); },
         function(error) { reg.json(400, { error: error }); });
   } else {
-    req.git.trees = [ repo ];
-    next();
+    dfs.exists(path.join(config.repoDir, repo))
+      .then(
+        function(exists) {
+          if (exists) {
+            req.git.trees = [ repo ];
+            return true;
+          } else {
+            return dfs.exists(path.join(config.repoDir, repo + '.git'))
+              .then(function(exists) { if (exists) { req.git.trees = [ repo + '.git' ]; } return exists; });
+          }
+       })
+      .then(function(exists) { if (exists) next(); else reg.json(400, { error: error }); })
+      .catch(function(error) { reg.json(400, { error: error }); });
   }
 }
 
