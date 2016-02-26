@@ -46,7 +46,8 @@ var rxSpawn = function(cmd, args, options) {
       }
 
       function endHandler(code) {
-        if (!_.isNumber(code) || code >= 2) {
+        if (code == null) return;
+        if (code !== 0) {
           var err = new VError(`spawn error: ${cmd} process exited with code ${code}`);
           console.error(err.stack);
         }
@@ -60,11 +61,12 @@ var rxSpawn = function(cmd, args, options) {
       logger.info(`Running ${cmd} in ${options.cwd} with args: ${args.join(' ')}`);
       var childProcess = spawn(cmd, args, options);
 
-      childProcess.stdout.addListener('data', dataHandler);
-      childProcess.stderr.addListener('data', errorHandler);
-      childProcess.addListener('close', endHandler);
+      childProcess.stdout.on('data', dataHandler);
+      childProcess.stderr.on('data', errorHandler);
+      childProcess.on('close', endHandler);
 
       return function() {
+        logger.info('killed git');
         childProcess.kill();
       };
     });
@@ -173,9 +175,9 @@ var parseGitGrep = function(line) {
 }
 
 var parseGitBranch = function(text) {
-  if (row.trim() == '') return;
-  var branch = { name: row.slice(2) };
-  if(row[0] == '*') branch.current = true;
+  if (text.trim() == '') return;
+  var branch = { name: text.slice(2) };
+  if(text[0] == '*') branch.current = true;
   return branch;
 }
 
@@ -243,12 +245,14 @@ app.get(config.prefix + '/repo/:repos/grep/:branches',
                 var ret = parseGitGrep(line);
                 ret.repo = repo;
                 return ret;
-            }).onErrorResumeNext(Rx.Observable.empty());
+            });
           if (target_line_no == 0) {
             return greps;
           }
           return greps.filter(function(grep) { return grep.line_no == target_line_no; });
-        });
+        })
+        .doOnError(e => console.error(e))
+        .onErrorResumeNext(Rx.Observable.empty());
     })
     .takeUntil(close)
     .subscribe(observeToResponse(res, delimiter));
