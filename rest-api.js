@@ -1,4 +1,4 @@
-const  express = require('express'),
+const express = require('express'),
     fs = require('fs'),
     path = require('path'),
     Q = require('q'),
@@ -8,9 +8,10 @@ const  express = require('express'),
     Rx = require('rx'),
     RxNode = require('rx-node'),
     cors = require('cors'),
+    RxSpawn = require('spawn-rx'),
     VError = require('verror');
 
-defaultConfig = {
+var defaultConfig = {
   prefix: '',
   repoDir: '/tmp/git',
   installMiddleware: false,
@@ -25,53 +26,27 @@ var logger = new (winston.Logger)({
 });
 
 var rxSpawn = function(cmd, args, options) {
-    var obs =  Rx.Observable.create(function(observer) {
-      var remainder = '';
-      function dataHandler(data) {
-        var str = data.toString();
-        var arr = str.split('\n');
-        if (remainder != '') {
-          arr[0] = remainder + arr[0];
-          remainder = '';
-        }
-        remainder = arr[arr.length - 1];
-        arr = arr.slice(0, arr.length - 1);
-        arr.forEach(function(line) { observer.onNext(line); });
+    var remainder = '';
+    var obs = RxSpawn.spawn(cmd, args, _.assign({}, options, { split: true }))
+    .filter(x => x.source === 'stdout')
+    .pluck('text')
+    .concatMap(function (str) {
+      var arr = str.split('\n');
+      if (remainder != '') {
+        arr[0] = remainder + arr[0];
+        remainder = '';
       }
-
-      function errorHandler(err) {
-        var newError = new VError(err, `spawn error for ${cmd}`);
-        console.error(newError.stack);
-        observer.onError(newError);
+      remainder = arr[arr.length - 1];
+      return arr.slice(0, arr.length - 1);
+    }).concat(Rx.Observable.create(function(observer) {
+      if (remainder != '') {
+        observer.onNext(remainder);
       }
+      observer.onCompleted();
+    }));
 
-      function endHandler(code) {
-        if (code == null) return;
-        if (code !== 0) {
-          var err = new VError(`spawn error: ${cmd} process exited with code ${code}`);
-          console.error(err.stack);
-        }
-        if (remainder != '') {
-          observer.onNext(remainder);
-          remainder = '';
-        }
-        observer.onCompleted();
-      }
-
-      logger.info(`Running ${cmd} in ${options.cwd} with args: ${args.join(' ')}`);
-      var childProcess = spawn(cmd, args, options);
-
-      childProcess.stdout.on('data', dataHandler);
-      childProcess.stderr.on('data', errorHandler);
-      childProcess.on('close', endHandler);
-
-      return function() {
-        logger.info('killed git');
-        childProcess.kill();
-      };
-    });
     return obs.publish().refCount();
-  };
+};
 
 var rxGit = function(repoPath, args) {
   return rxSpawn('git', ['-c', 'color.ui=false', '-c', 'core.quotepath=false', '-c', 'core.pager=cat'].concat(args), { cwd: repoPath, stdio: ['ignore', 'pipe', 'pipe'] });
