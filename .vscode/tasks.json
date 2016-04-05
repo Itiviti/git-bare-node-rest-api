@@ -1,0 +1,14 @@
+
+{
+  "version": "0.1.0",
+  "command": "npm",
+  "isShellCommand": true,
+  "showOutput": "always",
+  "args": ["run"],
+
+  "tasks": [ 
+    { "taskName": "compile" },
+    { "taskName": "test"    },
+    { "taskName": "start"	}
+  ]
+}
