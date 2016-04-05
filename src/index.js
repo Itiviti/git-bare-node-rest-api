@@ -154,8 +154,8 @@ exports.init = function(app, config) {
     if (spec[0] == '^') {
       var match = new RegExp(spec);
       return rxGit(repoDir, ['branch', '--list'])
-        .map(function(line) { return parseGitBranch(line).name;})
-        .filter(function(br) { return match.exec(br); })
+        .map((line) => parseGitBranch(line).name)
+        .filter((br) => match.exec(br))
         .toArray();
     } else {
       return Rx.Observable.return([spec]);
@@ -205,12 +205,12 @@ exports.init = function(app, config) {
       var delimiter = req.query.delimiter || '';
       var close = Rx.Observable.fromEvent(req, 'close');
       Rx.Observable.from(repos)
-        .concatMap(function(repo) {
+        .concatMap((repo) => {
           var repoDir = path.join(config.repoDir, repo);
           return getBranches(repoDir, req.params.branches)
-            .concatMap(function(list) {
+            .concatMap((list) => {
               var greps = rxGit(repoDir, ['-c', 'grep.patternType=' + pattern_type, 'grep', '-In'].concat(ignore_case).concat([q]).concat(list).concat('--').concat(files))
-                .map(function(line) {
+                .map((line) => {
                   var ret = parseGitGrep(line);
                   ret.repo = repo;
                   return ret;
@@ -218,7 +218,7 @@ exports.init = function(app, config) {
               if (target_line_no == 0) {
                 return greps;
               }
-              return greps.filter(function(grep) { return grep.line_no == target_line_no; });
+              return greps.filter((grep) => grep.line_no == target_line_no);
             })
             .doOnError(e => console.error(e))
             .onErrorResumeNext(Rx.Observable.empty());
