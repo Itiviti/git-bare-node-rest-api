@@ -6,6 +6,7 @@ import dfs from '../lib/deferred-fs';
 import Rx from 'rx';
 import cors from 'cors';
 import { spawn } from 'spawn-rx';
+import { Repository, Commit, Diff } from 'nodegit';
 
 var defaultConfig = {
   prefix: '',
@@ -137,6 +138,66 @@ exports.init = function(app, config) {
 
       res.json(200, repos);
     });
+    
+  app.get(config.prefix + '/repos/:repos/commits/:sha',
+    [prepareGitVars, getRepos],
+    function(req, res)
+    {
+      var repos = req.git.trees;
+      var sha = req.params.sha;
+      Rx.Observable.from(repos)
+      .flatMap(repo => Repository.open(path.join(config.repoDir, repo)))
+      .flatMap(repo => Commit.lookup(repo, sha) )
+      .flatMap(commit =>
+        Rx.Observable.fromPromise(commit.getDiff())
+        .flatMap(diffs => diffs) // Diff
+        .flatMap(diff => Rx.Observable.fromPromise(diff.patches())
+          .flatMap(patches => patches) // ConvenientPatch
+          .flatMap(patch => Rx.Observable.fromPromise(patch.hunks())
+            .flatMap(hunks => hunks) // ConvenientPatch
+            .flatMap(hunk => Rx.Observable.fromPromise(hunk.lines())
+              .flatMap(lines => lines) // DiffLine
+              .map(line => String.fromCharCode(line.origin())+line.content())
+              .toArray().map(lines => ({
+                content: hunk.header()+lines.join(''),
+                oldStart: hunk.oldStart(),
+                oldLines: hunk.oldLines(),
+                newStart: hunk.newStart(),
+                newLines: hunk.newLines()
+              }))
+            )
+            .toArray().map(hunks => ({
+              additions: patch.lineStats().total_additions,
+              deletions: patch.lineStats().total_deletions,
+              changes: patch.lineStats().total_additions + patch.lineStats().total_deletions,
+              from: patch.oldFile().path(),
+              to: patch.newFile().path(),
+              new: patch.isAdded(),
+              deleted: patch.isDeleted(),
+              chunks: hunks
+            }))
+          )
+          .toArray().map(patches => ({diff: diff, patches: patches}))
+        )
+        .toArray().map(diffs => ({commit: commit, diffs: diffs}))
+      )
+      .subscribe(x => {
+        var c = x.commit;
+        var au = c.author(), cm = c.committer();
+        res.json(200, {
+          sha: c.sha(),
+          commit: {
+            author: { name: au.name(), email: au.email(), date: au.when().time() },
+            committer: { name: cm.name(), email: cm.email(), date: cm.when().time() },
+            message: c.message()
+          },
+          parents: c.parents().map(p => ({sha: p.toString()})),
+          files: x.diffs[0].patches
+        });
+      });
+    });
+
+
 
   function parseGitGrep(line) {
     var split = line.split(':');
