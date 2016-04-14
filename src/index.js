@@ -181,10 +181,10 @@ exports.init = function(app, config) {
         )
         .toArray().map(diffs => ({commit: commit, diffs: diffs}))
       )
-      .subscribe(x => {
+      .map(x => {
         var c = x.commit;
         var au = c.author(), cm = c.committer();
-        res.json(200, {
+        return {
           sha: c.sha(),
           commit: {
             author: { name: au.name(), email: au.email(), date: au.when().time() },
@@ -193,8 +193,9 @@ exports.init = function(app, config) {
           },
           parents: c.parents().map(p => ({sha: p.toString()})),
           files: x.diffs[0].patches
-        });
-      });
+        };
+      })
+      .subscribe(observeToResponse(res, ' '));
     });
 
 
