@@ -7,6 +7,9 @@ import Rx from 'rx';
 import cors from 'cors';
 import { spawn } from 'spawn-rx';
 import { Repository, Commit, Diff } from 'nodegit';
+var bodyParser = require('body-parser');
+var cookieParser = require('cookie-parser');
+var methodOverride = require('method-override');
 
 var defaultConfig = {
   prefix: '',
@@ -62,9 +65,9 @@ exports.init = function(app, config) {
   mergeConfigs(config, defaultConfig);
 
   if (config.installMiddleware) {
-    app.use(express.bodyParser({ uploadDir: '/tmp', keepExtensions: true }));
-    app.use(express.methodOverride());
-    app.use(express.cookieParser('a-random-string-comes-here'));
+    app.use(bodyParser({ uploadDir: '/tmp', keepExtensions: true }));
+    app.use(methodOverride());
+    app.use(cookieParser('a-random-string-comes-here'));
     app.use(cors({exposedHeaders: ['Transfer-Encoding']}));
   }
 
@@ -200,9 +203,14 @@ exports.init = function(app, config) {
 
 
 
-  function parseGitGrep(line) {
-    var split = line.split(':');
-    return { branch: split[0], file: split[1], line_no: split[2], line: split.splice(3).join(':')};
+  function parseGitGrep(line, null_sep) {
+    var branch = line.split(':', 1)[0];
+    line = line.substring(branch.length+1);
+    if (null_sep) {
+      var split = line.split('\0');
+      return { branch, file: split[0], line_no: split[1], line: split[2]};
+    }
+    return { branch, file: line };
   }
 
   function parseGitBranch(row) {
@@ -265,22 +273,33 @@ exports.init = function(app, config) {
       var pattern_type = req.query.pattern_type || 'basic';
       var target_line_no = req.query.target_line_no || 0;
       var delimiter = req.query.delimiter || '';
+      var max_depth = req.query.max_depth || -1;
+      var context = req.query.context || 0;
+      var invert = req.query.invert ? ['-v'] : [];
+      var mode = req.query.mode ? [`--${req.query.mode}`] : [];
       var close = Rx.Observable.fromEvent(req, 'close');
+      var null_sep = !mode;
       Rx.Observable.from(repos)
-        .concatMap((repo) => {
+        .concatMap(repo => {
           var repoDir = path.join(config.repoDir, repo);
           return getBranches(repoDir, req.params.branches)
-            .concatMap((list) => {
-              var greps = rxGit(repoDir, ['-c', 'grep.patternType=' + pattern_type, 'grep', '-In'].concat(ignore_case).concat([q]).concat(list).concat('--').concat(files))
-                .map((line) => {
-                  var ret = parseGitGrep(line);
-                  ret.repo = repo;
-                  return ret;
-                });
+            .concatMap(list => {
+              var greps = rxGit(repoDir,
+                ['-c', 'grep.patternType=' + pattern_type, 'grep', null_sep ? '-Inz' : '-In', '-C', context, '--max-depth', max_depth]
+                  .concat(ignore_case)
+                  .concat(invert)
+                  .concat(mode)
+                  .concat('-e')
+                  .concat(q)
+                  .concat(list)
+                  .concat('--')
+                  .concat(files))
+                .filter(line => line != '--')
+                .map(line => _.assign({repo},  parseGitGrep(line, null_sep)));
               if (target_line_no == 0) {
                 return greps;
               }
-              return greps.filter((grep) => grep.line_no == target_line_no);
+              return greps.filter(grep => grep.line_no == target_line_no);
             })
             .doOnError(e => console.error(e))
             .onErrorResumeNext(Rx.Observable.empty());

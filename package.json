@@ -20,31 +20,34 @@
     "express"
   ],
   "dependencies": {
-    "async": "0.2.9",
-    "babel-polyfill": "^6.3.14",
+    "async": "2.0.0-rc.6",
+    "babel-polyfill": "^6.9.1",
+    "body-parser": "^1.15.1",
+    "cookie-parser": "^1.4.3",
     "cors": "^2.7.1",
-    "dive": "0.3.0",
-    "express": "3.x",
-    "lodash": "^4.0.1",
-    "mkdirp": "0.3.5",
-    "nodegit": "^0.12.2",
-    "q": "0.9.6",
-    "rimraf": "2.2.5",
-    "rx": "4.0.7",
-    "rx-node": "^1.0.1",
+    "dive": "0.5.0",
+    "express": "4.x",
+    "lodash": "^4.13.1",
+    "method-override": "^2.3.6",
+    "mkdirp": "0.5.1",
+    "nodegit": "^0.13.2",
+    "q": "1.4.1",
+    "rimraf": "2.5.2",
+    "rx": "4.1.0",
+    "rx-node": "^1.0.2",
     "signals": "~1.0.0",
     "spawn-rx": "^0.2.0",
-    "temp": "0.6.0",
+    "temp": "0.8.3",
     "verror": "^1.6.1",
-    "winston": "0.7.2"
+    "winston": "2.2.0"
   },
   "devDependencies": {
-    "babel-cli": "^6.4.5",
-    "babel-eslint": "^5.0.0-beta6",
-    "babel-preset-es2015": "^6.3.13",
-    "babel-preset-stage-0": "^6.3.13",
-    "babel-register": "^6.4.3",
-    "eslint": "^1.10.3"
+    "babel-cli": "^6.9.0",
+    "babel-eslint": "^6.0.4",
+    "babel-preset-es2015": "^6.9.0",
+    "babel-preset-stage-0": "^6.5.0",
+    "babel-register": "^6.9.0",
+    "eslint": "^2.11.1"
   },
   "engines": {
     "node": ">=0.10"
