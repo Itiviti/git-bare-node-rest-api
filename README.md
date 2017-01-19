@@ -12,7 +12,7 @@ GET /
 # returns all repositories matching regexp
 GET /repo/^foo
   [ "foo.git" ]
-  
+
 # the real deal comes now:
 # executes git grep over matching repositories/path/refspec and return results
 GET /repo/^foo/grep/HEAD?q=SOMETHING&path=*.md
@@ -33,7 +33,7 @@ You can use this service from the [git-react-client](https://github.com/Ullink/g
 
 You can run it manually using `npm start`, or use [forever](https://www.npmjs.com/package/forever) to keep it running.
 
-Set the `REPODIR` env variable to the folder containing your bare repositories.
+Set the `REPOSITORIES_DIR` env variable to the folder containing your bare repositories.
 
 ## Credits
 
