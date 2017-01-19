@@ -3,11 +3,10 @@ import express from 'express';
 import path from 'path';
 import winston from 'winston';
 import dfs from '../lib/deferred-fs';
-import Rx from 'rx';
+import Rx from 'rxjs/Rx';
 import cors from 'cors';
 import { spawn } from 'spawn-rx';
-import { Repository, Commit, Diff } from 'nodegit';
-var bodyParser = require('body-parser');
+import { Repository, Commit, Diff, Cred } from 'nodegit';
 var cookieParser = require('cookie-parser');
 var methodOverride = require('method-override');
 
@@ -38,9 +37,9 @@ function rxSpawn(cmd, args, options) {
       return arr.slice(0, arr.length - 1);
     }).concat(Rx.Observable.create(function(observer) {
       if (remainder != '') {
-        observer.onNext(remainder);
+        observer.next(remainder);
       }
-      observer.onCompleted();
+      observer.complete();
     }));
 
   return obs.publish().refCount();
@@ -65,7 +64,6 @@ exports.init = function(app, config) {
   mergeConfigs(config, defaultConfig);
 
   if (config.installMiddleware) {
-    app.use(bodyParser({ uploadDir: '/tmp', keepExtensions: true }));
     app.use(methodOverride());
     app.use(cookieParser('a-random-string-comes-here'));
     app.use(cors({exposedHeaders: ['Transfer-Encoding']}));
@@ -150,7 +148,22 @@ exports.init = function(app, config) {
       var sha = req.params.sha;
       Rx.Observable.from(repos)
       .flatMap(repo => Repository.open(path.join(config.repoDir, repo)))
-      .flatMap(repo => Commit.lookup(repo, sha) )
+      .flatMap(repo =>
+        Rx.Observable.defer(() => Commit.lookup(repo, sha))
+/* untested stuff
+.do(console.log)
+          .onErrorResumeNext(Rx.Observable.defer(() => { var url = `ssh://repo:${repo.path().replace(config.repoDir, '/home/git')}`;console.log(url);return repo.fetch(url, {
+            callbacks: {
+              credentials: function(url, userName) {
+                console.log(url);
+                return Cred.sshKeyFromAgent(userName);
+              }
+            }
+          });})
+.do(console.log)
+.flatMap(Rx.Observable.defer(() => Commit.lookup(repo, sha))))
+*/
+      )
       .flatMap(commit =>
         Rx.Observable.fromPromise(commit.getDiff())
         .flatMap(diffs => diffs) // Diff
@@ -228,7 +241,7 @@ exports.init = function(app, config) {
         .filter((br) => match.exec(br))
         .toArray();
     } else {
-      return Rx.Observable.return([spec]);
+      return Rx.Observable.of([spec]);
     }
   }
 
@@ -236,7 +249,7 @@ exports.init = function(app, config) {
     var replacer = app.get('json replacer');
     var spaces = app.get('json spaces');
     var noDelim = delimiter === '';
-    return Rx.Observer.create(function(val) {
+    return Rx.Subscriber.create(function(val) {
       var body = JSON.stringify(val, replacer, spaces);
       if (!res.headersSent) {
         res.status(200).set('Content-Type', 'application/json');
@@ -278,7 +291,7 @@ exports.init = function(app, config) {
       var invert = req.query.invert ? ['-v'] : [];
       var mode = req.query.mode ? [`--${req.query.mode}`] : [];
       var close = Rx.Observable.fromEvent(req, 'close');
-      var null_sep = !mode;
+      var null_sep = req.query.mode ? false : true;
       Rx.Observable.from(repos)
         .concatMap(repo => {
           var repoDir = path.join(config.repoDir, repo);
@@ -301,7 +314,7 @@ exports.init = function(app, config) {
               }
               return greps.filter(grep => grep.line_no == target_line_no);
             })
-            .doOnError(e => console.error(e))
+            .do(null, e => console.error(e))
             .onErrorResumeNext(Rx.Observable.empty());
         })
         .takeUntil(close)

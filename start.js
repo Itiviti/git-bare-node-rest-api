@@ -1,5 +1,6 @@
+require('babel-register');
 var app = require('express')();
-var api = require('./lib/index');
+var api = require('./src/index');
 
 var PORT = process.env['PORT'] || 8080;
 
@@ -9,3 +10,4 @@ api.init(app, {
 });
 app.listen(PORT);
 console.log('Listening on', PORT);
+
