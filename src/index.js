@@ -12,7 +12,7 @@ var methodOverride = require('method-override');
 
 var defaultConfig = {
   prefix: '',
-  repoDir: '/tmp/git',
+  repoDir: process.env['REPOSITORIES_DIR'] || '/tmp/git',
   installMiddleware: false
 };
 
@@ -139,7 +139,7 @@ exports.init = function(app, config) {
 
       res.json(200, repos);
     });
-    
+
   app.get(config.prefix + '/repos/:repos/commits/:sha',
     [prepareGitVars, getRepos],
     function(req, res)
