@@ -74,17 +74,9 @@ exports.init = function(app, config) {
     next();
   }
 
-  function getRepos(req, res, next) {
-    var repo = req.params.repos;
-    var workDir = config.repoDir;
-    if (repo.startsWith("^")){
-      var match = new RegExp(repo);
-      dfs.readdir(workDir)
-        .then(
-          function(repoList) { req.git.trees = repoList.filter(function(dir) { return match.exec(dir); }); next(); },
-          function(error) { res.json(400, { error: error.message }); });
-    } else {
-      dfs.exists(path.join(config.repoDir, repo))
+  function getRepo(req, res, next) {
+    var repo = req.params.repo;
+    dfs.exists(path.join(config.repoDir, repo))
         .then(
           function(exists) {
             if (exists) {
@@ -97,6 +89,20 @@ exports.init = function(app, config) {
           })
         .then(function(exists) { if (exists) next(); else res.json(400, { error: `repo ${repo} not found` }); })
         .catch(function(error) { res.json(400, { error: error.message }); });
+  }
+
+  function getRepos(req, res, next) {
+    var repo = req.params.repos;
+    var workDir = config.repoDir;
+    if (repo.startsWith("^")){
+      var match = new RegExp(repo);
+      dfs.readdir(workDir)
+        .then(
+          function(repoList) { req.git.trees = repoList.filter(function(dir) { return match.exec(dir); }); next(); },
+          function(error) { res.json(400, { error: error.message }); });
+    } else {
+      req.params.repo = repo;
+      getRepo(req, res, next);
     }
   }
 
