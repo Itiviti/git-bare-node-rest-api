@@ -5,7 +5,7 @@ var api = require('./src/index');
 var PORT = process.env['PORT'] || 8080;
 
 api.init(app, {
-  repoDir: process.env['REPODIR'],
+  repoDir: process.env['REPOSITORIES_DIR'],
   installMiddleware: true
 });
 app.listen(PORT);
