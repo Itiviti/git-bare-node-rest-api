@@ -87,8 +87,8 @@ exports.init = function(app, config) {
                 .then(function(exists) { if (exists) { req.git.trees = [ repo + '.git' ]; } return exists; });
             }
           })
-        .then(function(exists) { if (exists) next(); else res.json(400, { error: `repo ${repo} not found` }); })
-        .catch(function(error) { res.json(400, { error: error.message }); });
+        .then(function(exists) { if (exists) next(); else res.status(400).json({ error: `repo ${repo} not found` }); })
+        .catch(function(error) { res.status(400).json({ error: error.message }); });
   }
 
   function getRepos(req, res, next) {
@@ -99,7 +99,7 @@ exports.init = function(app, config) {
       dfs.readdir(workDir)
         .then(
           function(repoList) { req.git.trees = repoList.filter(function(dir) { return match.exec(dir); }); next(); },
-          function(error) { res.json(400, { error: error.message }); });
+          function(error) { res.status(400).json({ error: error.message }); });
     } else {
       req.params.repo = repo;
       getRepo(req, res, next);
@@ -124,7 +124,7 @@ exports.init = function(app, config) {
       dfs.readdir(workDir)
         .then(
           function(repoList) { res.json(repoList); },
-          function(error) { res.json(400, { error: error.message }); }
+          function(error) { res.status(400).json({ error: error.message }); }
         );
     });
 
@@ -143,7 +143,7 @@ exports.init = function(app, config) {
 
       logger.info('get repos:', req.git.trees);
 
-      res.json(200, repos);
+      res.status(200).json(repos);
     });
 
 
