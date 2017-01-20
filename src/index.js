@@ -146,6 +146,32 @@ exports.init = function(app, config) {
       res.json(200, repos);
     });
 
+
+  /* GET /repo/:repo/branch
+  *
+  * Response:
+  *   json: {
+  *     [
+  *       ({
+  *         "name": <branch name>,
+  *         "current": (true or false)
+  *       })*
+  *     ]
+  *   }
+  * Error:
+  *   json: { "error": <error> }
+  */
+  app.get(config.prefix + '/repo/:repo/branch',
+    [prepareGitVars, getRepo],
+    function(req, res)
+    {
+      logger.info('list branches');
+
+      var repoDir = path.join(config.repoDir, req.git.trees[0]);
+      getBranches(repoDir, '^')
+        .subscribe(observeToResponse(res, ''));
+    });
+
   app.get(config.prefix + '/repos/:repos/commits/:sha',
     [prepareGitVars, getRepos],
     function(req, res)
@@ -219,8 +245,6 @@ exports.init = function(app, config) {
       })
       .subscribe(observeToResponse(res, ' '));
     });
-
-
 
   function parseGitGrep(line, null_sep) {
     var branch = line.split(':', 1)[0];
