@@ -150,14 +150,7 @@ exports.init = function(app, config) {
   /* GET /repo/:repo/branch
   *
   * Response:
-  *   json: {
-  *     [
-  *       ({
-  *         "name": <branch name>,
-  *         "current": (true or false)
-  *       })*
-  *     ]
-  *   }
+  *   json: [ (<branch name>)* ]
   * Error:
   *   json: { "error": <error> }
   */
@@ -169,6 +162,7 @@ exports.init = function(app, config) {
 
       var repoDir = path.join(config.repoDir, req.git.trees[0]);
       getBranches(repoDir, '^')
+        .flatMap(branches => branches)
         .subscribe(observeToResponse(res, ''));
     });
 
