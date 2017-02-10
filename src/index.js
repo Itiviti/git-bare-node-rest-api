@@ -197,7 +197,28 @@ exports.init = function(app, config) {
         .subscribe(observeToResponse(res, ''));
     });
 
-  app.get(config.prefix + '/repos/:repos/commits/:sha',
+  /* GET /repo/:repo/show-ref
+  *
+  * Response:
+  *   json: [ ({"sha":<sha>, "name":<name>})* ]
+  * Error:
+  *   json: { "error": <error> }
+  */
+  app.get(config.prefix + '/repo/:repo/show-ref',
+    [prepareGitVars, getRepo],
+    function(req, res)
+    {
+      // Path form: <PREFIX>/repo/<repo>
+      //               0      1     2
+
+      var repoDir = path.join(config.repoDir, req.git.trees[0]);
+      rxGit(repoDir, ['show-ref'])
+        .map(line => line.split(' '))
+        .map(([sha, name]) => ({sha, name}))
+        .subscribe(observeToResponse(res, ''));
+    });
+
+   app.get(config.prefix + '/repos/:repos/commits/:sha',
     [prepareGitVars, getRepos],
     function(req, res)
     {
