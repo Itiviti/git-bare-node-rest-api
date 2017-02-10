@@ -187,10 +187,14 @@ exports.init = function(app, config) {
       filePath = path.normalize(filePath + '/_/..');
       if (filePath === '/') filePath = '';
 
+      filePath = filePath.replace(/\\/g, '/');
+
       var rev = 'HEAD';
       if (req.query.rev) {
         rev = req.query.rev;
       }
+
+      logger.info(`showing ${filePath} file info for rev ${rev}`);
 
       var repoDir = path.join(config.repoDir, req.git.trees[0]);
       rxGit(repoDir, ['show', rev + ':' + filePath])
