@@ -166,6 +166,37 @@ exports.init = function(app, config) {
         .subscribe(observeToResponse(res, ''));
     });
 
+  /* GET /repo/:repo/show/<path>?rev=<revision>
+  *  `rev` -- can be any legal revision
+  *
+  * Response:
+  *   <file contents>
+  * Error:
+  *   json: { "error": <error> }
+  */
+  app.get(config.prefix + '/repo/:repo/show/*',
+    [prepareGitVars, getRepo],
+    function(req, res)
+    {
+      // Path form: <PREFIX>/repo/<repo>/tree/<path>
+      //               0      1     2     3     4
+      var pathNoPrefix = req.path.substr(config.prefix.length);
+      var filePath = pathNoPrefix.split('/').slice(4).join(path.sep);
+
+      /* get rid of trailing slash */
+      filePath = path.normalize(filePath + '/_/..');
+      if (filePath === '/') filePath = '';
+
+      var rev = 'HEAD';
+      if (req.query.rev) {
+        rev = req.query.rev;
+      }
+
+      var repoDir = path.join(config.repoDir, req.git.trees[0]);
+      rxGit(repoDir, ['show', rev + ':' + filePath])
+        .subscribe(observeToResponse(res, ''));
+    });
+
   app.get(config.prefix + '/repos/:repos/commits/:sha',
     [prepareGitVars, getRepos],
     function(req, res)
