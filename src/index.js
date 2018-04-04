@@ -296,6 +296,72 @@ exports.init = function(app, config) {
       .subscribe(observeToResponse(res, ' '));
     });
 
+    /* GET /repo/:repo/show-branch?rev=<rev>[&rev=<rev>...]
+    *
+    * Response:
+    *   json: [ ({ "rev": <rev>, "commits": [ ({ "sha": <sha>, "message": <message> })* ] })* ]
+    */
+    app.get(config.prefix + '/repo/:repo/show-branch',
+        [prepareGitVars, getRepo],
+        function(req, res) {
+          const result = [];
+          const revs = Array.isArray(req.query.rev) ? req.query.rev : [req.query.rev];
+          const repoDir = path.join(config.repoDir, req.git.trees[0]);
+          rxGit(repoDir, ['show-branch', '--sha1-name', '--sparse'].concat(revs))
+              .map(line => ({
+                headerMatch: /\s*!\s*\[(\w+)].*/.exec(line),
+                bodyMatch: /^[-+\s*]+\[(\w+)].*/.exec(line),
+                line
+              }))
+              .do(line => {
+                const match = line.headerMatch || line.bodyMatch;
+                if (match) {
+                  line.commitId = match[1];
+                }
+              })
+              .filter(line => line.commitId)
+              .concatMap(line => rxGit(repoDir, ['log', '--format=%B', '-n', '1', line.commitId])
+                  .toArray()
+                  .map(commitMessage => ({ ...line, commitMessage: commitMessage.join('\n') })))
+              .do(line => {
+                if (line.headerMatch) {
+                  result.push({
+                    rev: line.headerMatch[1],
+                    commits: []
+                  });
+                }
+                if (line.bodyMatch) {
+                  let i = 0;
+                  while (i < result.length) {
+                    if (line.line[i] === '+' || line.line[i] === '-') {
+                      result[i].commits.push({ sha: line.bodyMatch[1], message: line.commitMessage });
+                    }
+                    i++;
+                  }
+                }
+              })
+              .subscribe(null, null, () => res.status(200).json(result));
+        });
+  
+  /* GET /repo/:repo/log?rev=<rev>[&rev=<rev>...]
+    *
+    * Response:
+    *   json: [ ({ "rev": <rev>, "commits": [ ({ "sha": <sha>, "message": <message> })* ] })* ]
+    */
+  app.get(config.prefix + '/repo/:repo/log',
+  [prepareGitVars, getRepo],
+  function(req, res) {
+   //const result = [];
+    const revs = Array.isArray(req.query.rev) ? req.query.rev : [req.query.rev];
+    const ignoreMerges = !!req.query.ignoreMerges;
+    const repoDir = path.join(config.repoDir, req.git.trees[0]);
+    rxGit(repoDir, ['log', '--pretty=format:%H', '--no-abbrev-commit'].concat(ignoreMerges ? ['--no-merges'] : []).concat(revs))
+       .concatMap(commitHash => rxGit(repoDir, ['log', '--format=%B', '-n', '1', commitHash])
+           .toArray()
+           .map(commitMessage => ({ commitHash, commitMessage: commitMessage.join('\n') })))
+       .subscribe(observeToResponse(res,''));
+  });
+
   function parseGitGrep(line, null_sep) {
     var branch = line.split(':', 1)[0];
     line = line.substring(branch.length+1);
