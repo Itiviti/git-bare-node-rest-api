@@ -31,7 +31,7 @@ You can use this service from the [git-react-client](https://github.com/Ullink/g
 
 ## Install
 
-You can run it manually using `npm start`, or use [forever](https://www.npmjs.com/package/forever) to keep it running.
+You can run it manually using `npm start`, or use ~~[forever]~~(https://www.npmjs.com/package/forever)/[pm2](http://pm2.keymetrics.io/) to keep it running.
 
 Set the `REPOSITORIES_DIR` env variable to the folder containing your bare repositories.
 
