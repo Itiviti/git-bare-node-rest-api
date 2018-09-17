@@ -362,6 +362,30 @@ exports.init = function(app, config) {
        .subscribe(observeToResponse(res,''));
   });
 
+  /* GET /repo/:repo/diff/:from/:to
+    *
+    * Response:
+    *   json: [ ({ "path": <path> })* ]
+    */
+  app.get(config.prefix + '/repo/:repo/diff/:from/:to',
+    [prepareGitVars, getRepo],
+    function(req, res) {
+      const { trees: [ repo ] } = req.git;
+      Repository.open(path.join(config.repoDir, repo))
+        .then((repository) => {
+          Promise.all([repository.getCommit(req.params.from), repository.getCommit(req.params.to)])
+            .then(([from, to]) => Promise.all([from.getTree(), to.getTree()]))
+            .then(([from, to]) => to.diff(from))
+            .then((diffs) => diffs.patches())
+            .then((patches) => patches.map(patch => {
+              return {
+                path: patch.newFile().path()
+              };
+            }))
+            .then((patches) => res.json(patches));
+        });
+    });
+
   function parseGitGrep(line, null_sep) {
     var branch = line.split(':', 1)[0];
     line = line.substring(branch.length+1);
