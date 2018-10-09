@@ -67,6 +67,10 @@ exports.init = function(app, config) {
     app.use(methodOverride());
     app.use(cookieParser('a-random-string-comes-here'));
     app.use(cors({exposedHeaders: ['Transfer-Encoding']}));
+    app.use(function (req, res, next) {
+      console.log(`received from ${req.get("X-Forwarded-For") || req.connection.remoteAddress} : ${req.method} ${req.originalUrl}`)
+      next();
+    });
   }
 
   function prepareGitVars(req, res, next) {
