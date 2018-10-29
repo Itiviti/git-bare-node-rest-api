@@ -355,7 +355,14 @@ exports.init = function(app, config) {
   app.get(config.prefix + '/repo/:repo/log',
   [prepareGitVars, getRepo],
   function(req, res) {
-    const revs = Array.isArray(req.query.rev) ? req.query.rev : [req.query.rev];
+    let revs = [];
+    if (!req.query.rev) {
+      revs = ['--all'];
+    } else if (Array.isArray(req.query.rev)) {
+      revs = req.query.rev;
+    } else {
+      revs = [req.query.rev];
+    }
     const ignoreMerges = !!req.query.ignoreMerges;
     const maxCount = !!req.query.maxCount || 50;
     const repoDir = path.join(config.repoDir, req.git.trees[0]);
