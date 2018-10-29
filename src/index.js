@@ -357,8 +357,9 @@ exports.init = function(app, config) {
   function(req, res) {
     const revs = Array.isArray(req.query.rev) ? req.query.rev : [req.query.rev];
     const ignoreMerges = !!req.query.ignoreMerges;
+    const maxCount = !!req.query.maxCount || 50;
     const repoDir = path.join(config.repoDir, req.git.trees[0]);
-    rxGit(repoDir, ['log', '--pretty=format:%H', '--no-abbrev-commit'].concat(ignoreMerges ? ['--no-merges'] : []).concat(revs))
+    rxGit(repoDir, ['log', '--pretty=format:%H', '--no-abbrev-commit', '--max-count', maxCount].concat(ignoreMerges ? ['--no-merges'] : []).concat(revs))
       .concatMap(commitHash => {
         return rxGit(repoDir, ['log', '--format=%B', '-n', '1', commitHash])
           .toArray()
