@@ -350,20 +350,26 @@ exports.init = function(app, config) {
   /* GET /repo/:repo/log?rev=<rev>[&rev=<rev>...]
     *
     * Response:
-    *   json: [ ({ "rev": <rev>, "commits": [ ({ "sha": <sha>, "message": <message> })* ] })* ]
+    *   json: [ ({ "rev": <rev>, "commits": [ ({ "sha": <sha>, "message": <message>, "tags": [<tag>...] })* ] })* ]
     */
   app.get(config.prefix + '/repo/:repo/log',
   [prepareGitVars, getRepo],
   function(req, res) {
-   //const result = [];
     const revs = Array.isArray(req.query.rev) ? req.query.rev : [req.query.rev];
     const ignoreMerges = !!req.query.ignoreMerges;
     const repoDir = path.join(config.repoDir, req.git.trees[0]);
     rxGit(repoDir, ['log', '--pretty=format:%H', '--no-abbrev-commit'].concat(ignoreMerges ? ['--no-merges'] : []).concat(revs))
-       .concatMap(commitHash => rxGit(repoDir, ['log', '--format=%B', '-n', '1', commitHash])
-           .toArray()
-           .map(commitMessage => ({ commitHash, commitMessage: commitMessage.join('\n') })))
-       .subscribe(observeToResponse(res,''));
+      .concatMap(commitHash => {
+        return rxGit(repoDir, ['log', '--format=%B', '-n', '1', commitHash])
+          .toArray()
+          .map(commitMessage => ({ commitHash, commitMessage: commitMessage.join('\n') }));
+      })
+      .concatMap(commit => {
+        return rxGit(repoDir, ['tag', '--points-at', commit.commitHash])
+          .toArray()
+          .map(tags => ({ ...commit, tags }));
+      })
+      .subscribe(observeToResponse(res,''));
   });
 
   /* GET /repo/:repo/diff/:from/:to
