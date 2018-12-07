@@ -373,6 +373,26 @@ exports.init = function(app, config) {
           .map(commitMessage => ({ commitHash, commitMessage: commitMessage.join('\n') }));
       })
       .concatMap(commit => {
+        return rxGit(repoDir, ['log', '--format=%an%n%ae%n%aI%n%cn%n%ce%n%cI', '-n', '1', commit.commitHash])
+          .toArray()
+          .map(([
+            authorName,
+            authorEmail,
+            authorDate,
+            committerName,
+            committerEmail,
+            committerDate
+          ]) => ({
+            ...commit,
+            authorName,
+            authorEmail,
+            authorDate,
+            committerName,
+            committerEmail,
+            committerDate
+          }));
+      })
+      .concatMap(commit => {
         return rxGit(repoDir, ['tag', '--points-at', commit.commitHash])
           .toArray()
           .map(tags => ({ ...commit, tags }));
