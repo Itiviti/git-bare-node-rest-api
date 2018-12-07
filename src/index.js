@@ -373,6 +373,30 @@ exports.init = function(app, config) {
           .map(commitMessage => ({ commitHash, commitMessage: commitMessage.join('\n') }));
       })
       .concatMap(commit => {
+        return rxGit(repoDir, ['log', '--format=%an', '-n', '1', commit.commitHash])
+          .map(authorName => ({ ...commit, authorName }));
+      })
+      .concatMap(commit => {
+        return rxGit(repoDir, ['log', '--format=%ae', '-n', '1', commit.commitHash])
+          .map(authorEmail => ({ ...commit, authorEmail }));
+      })
+      .concatMap(commit => {
+        return rxGit(repoDir, ['log', '--format=%aI', '-n', '1', commit.commitHash])
+          .map(authorDate => ({ ...commit, authorDate }));
+      })
+      .concatMap(commit => {
+        return rxGit(repoDir, ['log', '--format=%cn', '-n', '1', commit.commitHash])
+          .map(committerName => ({ ...commit, committerName }));
+      })
+      .concatMap(commit => {
+        return rxGit(repoDir, ['log', '--format=%ce', '-n', '1', commit.commitHash])
+          .map(committerEmail => ({ ...commit, committerEmail }));
+      })
+      .concatMap(commit => {
+        return rxGit(repoDir, ['log', '--format=%cI', '-n', '1', commit.commitHash])
+          .map(committerDate => ({ ...commit, committerDate }));
+      })
+      .concatMap(commit => {
         return rxGit(repoDir, ['tag', '--points-at', commit.commitHash])
           .toArray()
           .map(tags => ({ ...commit, tags }));
