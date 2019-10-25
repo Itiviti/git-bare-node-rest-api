@@ -346,7 +346,7 @@ exports.init = function(app, config) {
               })
               .subscribe(null, null, () => res.status(200).json(result));
         });
-  
+
   /* GET /repo/:repo/log?rev=<rev>[&rev=<rev>...]
     *
     * Response:
@@ -483,7 +483,7 @@ exports.init = function(app, config) {
     });
   }
 
-  app.get(config.prefix + '/repo/:repos/grep/:branches',
+  app.get(config.prefix + '/repo/:repos/grep/:branches(*)',
     [prepareGitVars, getRepos],
     function(req, res)
     {
@@ -500,6 +500,7 @@ exports.init = function(app, config) {
       var mode = req.query.mode ? [`--${req.query.mode}`] : [];
       var close = Rx.Observable.fromEvent(req, 'close');
       var null_sep = req.query.mode ? false : true;
+
       Rx.Observable.from(repos)
         .concatMap(repo => {
           var repoDir = path.join(config.repoDir, repo);
