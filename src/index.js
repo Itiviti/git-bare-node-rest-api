@@ -404,6 +404,8 @@ exports.init = function(app, config) {
     *
     * Response:
     *   json: [ ({ "path": <path> })* ]
+    * Error:
+    *   json: { "error": <error> }
     */
   app.get(config.prefix + '/repo/:repo/diff/:from/:to',
     [prepareGitVars, getRepo],
@@ -420,7 +422,8 @@ exports.init = function(app, config) {
                 path: patch.newFile().path()
               };
             }))
-            .then((patches) => res.json(patches));
+            .then((patches) => res.json(patches))
+            .catch(e => res.status(500).json({ "error": e.message }));
         });
     });
 
