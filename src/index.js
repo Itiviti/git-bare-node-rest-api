@@ -226,6 +226,33 @@ exports.init = function(app, config) {
         .subscribe(observeToResponse(res, ''));
     });
 
+  /* GET /repo/:repo/for-each-ref
+  *
+  * Returns all local branch heads with their committer date
+  *
+  * Response:
+  *   json: [ ({"name":<short-branch>, "sha":<sha>, "committerdate":<iso8601>})* ]
+  * Error:
+  *   json: { "error": <error> }
+  */
+  app.get(config.prefix + '/repo/:repo/for-each-ref',
+    [prepareGitVars, getRepo],
+    function(req, res)
+    {
+      var repoDir = path.join(config.repoDir, req.git.trees[0]);
+      rxGit(repoDir, [
+        'for-each-ref', 'refs/heads/',
+        '--format=%(refname:short)\t%(objectname)\t%(committerdate:iso-strict)',
+        '--sort=-committerdate'
+      ])
+        .filter(line => line.trim() !== '')
+        .map(line => {
+          var parts = line.split('\t');
+          return { name: parts[0], sha: parts[1], committerdate: parts[2] || null };
+        })
+        .subscribe(observeToResponse(res, ''));
+    });
+
    app.get(config.prefix + '/repos/:repos/commits/:sha',
     [prepareGitVars, getRepos],
     function(req, res)
