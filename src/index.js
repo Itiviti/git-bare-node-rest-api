@@ -12,7 +12,6 @@ var methodOverride = require('method-override');
 
 var defaultConfig = {
   prefix: '',
-  repoDir: process.env['REPOSITORIES_DIR'] || '/tmp/git',
   installMiddleware: false
 };
 
@@ -64,11 +63,12 @@ exports.init = function(app, config) {
   mergeConfigs(config, defaultConfig);
 
   if (config.installMiddleware) {
+    logger.info('Installing middleware...');
     app.use(methodOverride());
     app.use(cookieParser('a-random-string-comes-here'));
     app.use(cors({exposedHeaders: ['Transfer-Encoding']}));
     app.use(function (req, res, next) {
-      console.log(`received from ${req.get("X-Forwarded-For") || req.connection.remoteAddress} : ${req.method} ${req.originalUrl}`)
+      logger.info(`received from ${req.get("X-Forwarded-For") || req.connection.remoteAddress} : ${req.method} ${req.originalUrl}`)
       next();
     });
   }
