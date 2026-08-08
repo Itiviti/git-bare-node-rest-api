@@ -23,7 +23,15 @@ var logger = new (winston.Logger)({
 
 function rxSpawn(cmd, args, options) {
   var remainder = '';
-  var obs = spawn(cmd, args, _.assign({}, options, { split: true }))
+  var stderrBuf = '';
+  var proc = spawn(cmd, args, _.assign({}, options, { split: true })).share();
+
+  proc.filter(x => x.source === 'stderr').subscribe({
+    next: x => { stderrBuf += x.text; },
+    error: function() {} // surfaced via the stdout branch's error below
+  });
+
+  var obs = proc
     .filter(x => x.source === 'stdout')
     .pluck('text')
     .concatMap(function (str) {
@@ -39,7 +47,10 @@ function rxSpawn(cmd, args, options) {
         observer.next(remainder);
       }
       observer.complete();
-    }));
+    })).catch(function(err) {
+      var detail = stderrBuf.trim();
+      throw new Error(detail ? `${err.message}: ${detail}` : err.message);
+    });
 
   return obs.publish().refCount();
 }
@@ -242,14 +253,16 @@ exports.init = function(app, config) {
       var repoDir = path.join(config.repoDir, req.git.trees[0]);
       rxGit(repoDir, [
         'for-each-ref',
-        '--format=%(refname:short)\t%(objectname)\t%(committerdate:iso-strict)',
+        // 'raw' (epoch + tz offset) is supported by ancient git versions, unlike
+        // 'iso-strict' which requires git >= 2.2 — we build the ISO string ourselves
+        '--format=%(refname:short)\t%(objectname)\t%(committerdate:raw)',
         '--sort=-committerdate',
         'refs/heads/'
       ])
         .filter(line => line.trim() !== '')
         .map(line => {
           var parts = line.split('\t');
-          return { name: parts[0], sha: parts[1], committerdate: parts[2] || null };
+          return { name: parts[0], sha: parts[1], committerdate: rawDateToIso(parts[2]) };
         })
         .do(null, e => logger.error(`for-each-ref failed for ${req.git.trees[0]}: ${e.message}`))
         .subscribe(observeToResponse(res, ''));
@@ -464,6 +477,24 @@ exports.init = function(app, config) {
       return { branch, file: split[0], line_no: split[1], line: split[2]};
     }
     return { branch, file: line };
+  }
+
+  // Converts git's "<epoch-seconds> <+/-HHMM>" raw date into an ISO-8601 string
+  function rawDateToIso(raw) {
+    var m = /^(\d+)\s+([+-]\d{4})$/.exec((raw || '').trim());
+    if (!m) return null;
+
+    var epochSeconds = parseInt(m[1], 10);
+    var tz = m[2];
+    var sign = tz[0];
+    var offsetMinutes = (sign === '-' ? -1 : 1) * (parseInt(tz.slice(1, 3), 10) * 60 + parseInt(tz.slice(3, 5), 10));
+
+    function pad(n) { n = String(n); return n.length < 2 ? '0' + n : n; }
+
+    var local = new Date(epochSeconds * 1000 + offsetMinutes * 60000);
+    return local.getUTCFullYear() + '-' + pad(local.getUTCMonth() + 1) + '-' + pad(local.getUTCDate())
+      + 'T' + pad(local.getUTCHours()) + ':' + pad(local.getUTCMinutes()) + ':' + pad(local.getUTCSeconds())
+      + tz.slice(0, 3) + ':' + tz.slice(3, 5);
   }
 
   function parseGitBranch(row) {
