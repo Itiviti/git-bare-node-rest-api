@@ -241,15 +241,17 @@ exports.init = function(app, config) {
     {
       var repoDir = path.join(config.repoDir, req.git.trees[0]);
       rxGit(repoDir, [
-        'for-each-ref', 'refs/heads/',
+        'for-each-ref',
         '--format=%(refname:short)\t%(objectname)\t%(committerdate:iso-strict)',
-        '--sort=-committerdate'
+        '--sort=-committerdate',
+        'refs/heads/'
       ])
         .filter(line => line.trim() !== '')
         .map(line => {
           var parts = line.split('\t');
           return { name: parts[0], sha: parts[1], committerdate: parts[2] || null };
         })
+        .do(null, e => logger.error(`for-each-ref failed for ${req.git.trees[0]}: ${e.message}`))
         .subscribe(observeToResponse(res, ''));
     });
 
